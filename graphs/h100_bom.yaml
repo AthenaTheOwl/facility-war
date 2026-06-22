@@ -1,0 +1,165 @@
+graph_id: h100_bom_v0_1
+name: public h100 bom fixture
+description: small public fixture for deterministic shock playthroughs
+nodes:
+  - id: geo_taiwan
+    type: geography
+    name: taiwan
+    country: taiwan
+    region: east asia
+  - id: geo_japan
+    type: geography
+    name: japan
+    country: japan
+    region: east asia
+  - id: geo_arizona
+    type: geography
+    name: arizona
+    country: united states
+    region: north america
+  - id: geo_egypt
+    type: geography
+    name: suez corridor
+    country: egypt
+    region: north africa
+  - id: geo_us_midwest
+    type: geography
+    name: united states midwest
+    country: united states
+    region: north america
+  - id: sup_taiwan_substrate_a
+    type: supplier
+    name: taiwan substrate supplier a
+    tier: 2
+  - id: sup_taiwan_packaging
+    type: supplier
+    name: taiwan advanced packaging supplier
+    tier: 1
+  - id: sup_japan_hbm
+    type: supplier
+    name: japan hbm supplier
+    tier: 1
+  - id: sup_arizona_test
+    type: supplier
+    name: arizona test supplier
+    tier: 2
+  - id: sup_suez_forwarder
+    type: supplier
+    name: suez forwarder
+    tier: 3
+  - id: sup_us_alt_substrate
+    type: supplier
+    name: us alternate substrate supplier
+    tier: 2
+  - id: cmp_abf_substrate
+    type: component
+    name: abf substrate
+    tier: 2
+  - id: cmp_alt_substrate
+    type: component
+    name: alternate organic substrate
+    tier: 2
+  - id: cmp_advanced_package
+    type: component
+    name: advanced package
+    tier: 1
+  - id: cmp_hbm_stack
+    type: component
+    name: hbm stack
+    tier: 1
+  - id: cmp_gpu_die
+    type: component
+    name: gpu die
+    tier: 1
+  - id: cmp_ocean_lane
+    type: component
+    name: ocean lane capacity
+    tier: 3
+  - id: cmp_pcie_board
+    type: component
+    name: pcie board
+    tier: 1
+  - id: cmp_testing_slot
+    type: component
+    name: final test slot
+    tier: 2
+  - id: bom_h100_accelerator
+    type: bom_item
+    name: h100 accelerator
+    tier: 0
+edges:
+  - from: sup_taiwan_substrate_a
+    to: geo_taiwan
+    type: located_in
+  - from: sup_taiwan_packaging
+    to: geo_taiwan
+    type: located_in
+  - from: sup_japan_hbm
+    to: geo_japan
+    type: located_in
+  - from: sup_arizona_test
+    to: geo_arizona
+    type: located_in
+  - from: sup_suez_forwarder
+    to: geo_egypt
+    type: located_in
+  - from: sup_us_alt_substrate
+    to: geo_us_midwest
+    type: located_in
+  - from: sup_taiwan_substrate_a
+    to: cmp_abf_substrate
+    type: supplies
+    criticality: 1.0
+  - from: sup_us_alt_substrate
+    to: cmp_alt_substrate
+    type: supplies
+    criticality: 1.0
+  - from: cmp_alt_substrate
+    to: cmp_abf_substrate
+    type: substitutes_for
+    max_substitutable_severity: 0.95
+    post_substitution_risk: 0.2
+  - from: sup_taiwan_packaging
+    to: cmp_advanced_package
+    type: supplies
+    criticality: 1.0
+  - from: sup_japan_hbm
+    to: cmp_hbm_stack
+    type: supplies
+    criticality: 1.0
+  - from: sup_arizona_test
+    to: cmp_testing_slot
+    type: supplies
+    criticality: 0.9
+  - from: sup_suez_forwarder
+    to: cmp_ocean_lane
+    type: supplies
+    criticality: 1.0
+  - from: cmp_abf_substrate
+    to: cmp_advanced_package
+    type: depends_on
+    criticality: 0.8
+  - from: cmp_gpu_die
+    to: cmp_advanced_package
+    type: depends_on
+    criticality: 1.0
+  - from: cmp_ocean_lane
+    to: cmp_pcie_board
+    type: depends_on
+    criticality: 0.4
+  - from: cmp_advanced_package
+    to: bom_h100_accelerator
+    type: depends_on
+    criticality: 1.0
+  - from: cmp_hbm_stack
+    to: bom_h100_accelerator
+    type: depends_on
+    criticality: 0.8
+  - from: cmp_pcie_board
+    to: bom_h100_accelerator
+    type: depends_on
+    criticality: 0.5
+  - from: cmp_testing_slot
+    to: bom_h100_accelerator
+    type: depends_on
+    criticality: 0.7

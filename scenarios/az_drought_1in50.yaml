@@ -1,0 +1,18 @@
+scenario_id: az_drought_1in50
+name: arizona 1 in 50 drought
+trigger: arizona test capacity is constrained by drought response limits
+horizon_weeks: 26
+duration_weeks_distribution:
+  type: fixed_weeks
+  weeks: 8
+affected_geographies:
+  - geo_arizona
+affected_components:
+  - cmp_testing_slot
+severity_distribution:
+  type: fixed
+  value: 0.8
+substitution_severity_threshold: 0.3
+references:
+  - "scenario spec: 1 in 50 drought planning case"
+  - "fixture: graphs/h100_bom.yaml"

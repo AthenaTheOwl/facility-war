@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/facility-war/sim_run.schema.json",
+  "type": "object",
+  "required": [
+    "run_id",
+    "graph_hash",
+    "scenario_id",
+    "trial_count",
+    "seed",
+    "started_at",
+    "finished_at",
+    "per_bom_item_distribution",
+    "mitigation_candidates"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "graph_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "trial_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "finished_at": {
+      "type": "string"
+    },
+    "max_tier": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "horizon_weeks": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "per_bom_item_distribution": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "outage_weeks",
+          "expected_red_weeks",
+          "probability_any_red_week",
+          "status_share"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "outage_weeks": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "expected_red_weeks": {
+            "type": "number",
+            "minimum": 0
+          },
+          "probability_any_red_week": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "status_share": {
+            "type": "object",
+            "required": ["green", "amber", "red"],
+            "additionalProperties": false,
+            "properties": {
+              "green": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "amber": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "red": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "mitigation_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "mitigation_id",
+          "type",
+          "target",
+          "expected_reduction_weeks",
+          "rationale"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "mitigation_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["dual_source", "buffer", "redesign"]
+          },
+          "target": {
+            "type": "string"
+          },
+          "expected_reduction_weeks": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rationale": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
