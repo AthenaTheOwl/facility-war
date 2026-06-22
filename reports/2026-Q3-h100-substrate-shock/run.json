@@ -1,0 +1,48 @@
+{
+  "finished_at": "2026-06-22T00:00:00Z",
+  "graph_hash": "1ddfa6b17ddf5be1769634664ba9babc886c7fb376fbcd572dc010d7094cbe41",
+  "horizon_weeks": 26,
+  "max_tier": 4,
+  "mitigation_candidates": [
+    {
+      "expected_reduction_weeks": 5.85,
+      "mitigation_id": "dual-source-highest-geography-hit",
+      "rationale": "adds a checked supplier outside the affected geography",
+      "target": "sup_taiwan_substrate_a",
+      "type": "dual_source"
+    },
+    {
+      "expected_reduction_weeks": 4.0,
+      "mitigation_id": "buffer-top-bom-item",
+      "rationale": "covers early red weeks for the most exposed bom item",
+      "target": "bom_h100_accelerator",
+      "type": "buffer"
+    },
+    {
+      "expected_reduction_weeks": 3.9,
+      "mitigation_id": "redesign-affected-component",
+      "rationale": "moves demand away from the directly affected component",
+      "target": "cmp_advanced_package",
+      "type": "redesign"
+    }
+  ],
+  "per_bom_item_distribution": {
+    "bom_h100_accelerator": {
+      "expected_red_weeks": 13.0,
+      "outage_weeks": {
+        "13": 1000
+      },
+      "probability_any_red_week": 1.0,
+      "status_share": {
+        "amber": 0.0,
+        "green": 0.5,
+        "red": 0.5
+      }
+    }
+  },
+  "run_id": "2026-Q3-h100-substrate-shock",
+  "scenario_id": "taiwan_substrate_90d",
+  "seed": 42,
+  "started_at": "2026-06-22T00:00:00Z",
+  "trial_count": 1000
+}

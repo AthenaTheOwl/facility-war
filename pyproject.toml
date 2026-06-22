@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "facility-war"
+version = "0.1.0"
+description = "deterministic supply-shock playthroughs for public fixture graphs"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "jsonschema>=4.22",
+  "pyyaml>=6.0",
+]
+
+[project.scripts]
+facility-war = "facility_war.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/facility_war"]
+
+[tool.uv]
+package = true

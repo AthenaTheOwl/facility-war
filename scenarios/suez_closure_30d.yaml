@@ -1,0 +1,18 @@
+scenario_id: suez_closure_30d
+name: suez closure for 30 days
+trigger: suez corridor closes for 30 days
+horizon_weeks: 18
+duration_weeks_distribution:
+  type: fixed_weeks
+  weeks: 4
+affected_geographies:
+  - geo_egypt
+affected_components:
+  - cmp_ocean_lane
+severity_distribution:
+  type: fixed
+  value: 0.75
+substitution_severity_threshold: 0.3
+references:
+  - "scenario spec: 30 day route closure assumption"
+  - "fixture: graphs/h100_bom.yaml"
