@@ -55,6 +55,24 @@ the point: a taiwan substrate shock idles the h100 accelerator for half the
 horizon, and `show` ranks the cheapest fix first so you act on the supplier that
 buys back the most weeks instead of guessing.
 
+## live demo
+
+`streamlit_app.py` wraps the same result the `show` verb prints: the ranked bom
+items, the mitigation queue, and the headline fix. it reads the committed
+`reports/2026-Q3-h100-substrate-shock/run.json` directly — no network, no secrets.
+
+run it locally:
+
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+deploy on streamlit community cloud: new app -> repo `AthenaTheOwl/facility-war`,
+branch `main`, main file `streamlit_app.py`.
+
+<!-- live url: https://<your-app>.streamlit.app -->
+
 ## included fixtures
 
 - `graphs/h100_bom.yaml`
