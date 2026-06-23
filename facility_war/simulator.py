@@ -398,6 +398,93 @@ def render_report(
     )
 
 
+def _name_lookup(graph: dict[str, Any] | None) -> dict[str, str]:
+    if not graph:
+        return {}
+    return {node["id"]: node.get("name", node["id"]) for node in graph.get("nodes", [])}
+
+
+def render_show(sim_run: dict[str, Any], *, graph: dict[str, Any] | None = None) -> str:
+    """Render a human-readable ranked view of a committed simulation run."""
+
+    names = _name_lookup(graph)
+
+    def label(node_id: str) -> str:
+        return names.get(node_id, node_id)
+
+    distributions = sim_run.get("per_bom_item_distribution", {})
+    ranked = sorted(
+        distributions.items(),
+        key=lambda kv: kv[1].get("expected_red_weeks", 0.0),
+        reverse=True,
+    )
+
+    horizon = sim_run.get("horizon_weeks", 0)
+    lines: list[str] = []
+    lines.append(
+        f"facility-war - supply-shock playthrough, {sim_run.get('run_id', '?')}"
+    )
+    lines.append(
+        f"scenario {sim_run.get('scenario_id', '?')} | "
+        f"{sim_run.get('trial_count', 0)} trials | seed {sim_run.get('seed', '?')} | "
+        f"{horizon}-week horizon | tier walk to {sim_run.get('max_tier', '?')}"
+    )
+    lines.append("")
+    lines.append(
+        f"{len(ranked)} bom item(s), ranked by expected weeks in 'red' (supply unavailable)"
+    )
+    lines.append("")
+
+    header = (
+        f"{'bom item':<22} {'exp red wks':>11} {'of horizon':>11} "
+        f"{'any-red prob':>13} {'red share':>10}"
+    )
+    lines.append(header)
+    lines.append("-" * len(header))
+    for bom_id, dist in ranked:
+        exp = dist.get("expected_red_weeks", 0.0)
+        of_horizon = f"{exp / horizon:.0%}" if horizon else "?"
+        red_share = dist.get("status_share", {}).get("red", 0.0)
+        lines.append(
+            f"{label(bom_id)[:22]:<22} "
+            f"{exp:>10.2f}w "
+            f"{of_horizon:>11} "
+            f"{dist.get('probability_any_red_week', 0.0):>12.0%} "
+            f"{red_share:>10.0%}"
+        )
+
+    mitigations = sim_run.get("mitigation_candidates", [])
+    if mitigations:
+        lines.append("")
+        lines.append("mitigation queue, ranked by expected red-week reduction:")
+        for rank, item in enumerate(mitigations, start=1):
+            lines.append(
+                f"  {rank}. {item.get('type', '?'):<11} on {label(item.get('target', '?'))} "
+                f"- saves ~{item.get('expected_reduction_weeks', 0.0):.1f} red weeks "
+                f"({item.get('rationale', '')})"
+            )
+
+    if ranked:
+        worst_id, worst = ranked[0]
+        lines.append("")
+        msg = (
+            f"headline: {label(worst_id)} spends ~{worst.get('expected_red_weeks', 0.0):.0f} "
+            f"of {horizon} weeks unavailable under this shock"
+        )
+        if mitigations:
+            top = mitigations[0]
+            msg += (
+                f"; best single move is to {top.get('type', '?')} "
+                f"{label(top.get('target', '?'))} "
+                f"(~{top.get('expected_reduction_weeks', 0.0):.1f} weeks back)."
+            )
+        else:
+            msg += "."
+        lines.append(msg)
+
+    return "\n".join(lines)
+
+
 def validate_default_files() -> list[str]:
     messages: list[str] = []
 

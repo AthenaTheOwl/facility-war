@@ -7,9 +7,11 @@ from . import __version__
 from .simulator import (
     DEFAULT_GRAPH,
     DEFAULT_REPORT_DIR,
+    DEFAULT_RUN,
     DEFAULT_SCENARIO,
     load_document,
     render_report,
+    render_show,
     run_simulation,
     validate_default_files,
     write_json,
@@ -28,6 +30,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate_parser.set_defaults(func=_validate)
 
+    show_parser = subparsers.add_parser(
+        "show",
+        help="print a readable ranked view of the committed run (no args needed)",
+    )
+    show_parser.add_argument(
+        "--run",
+        type=Path,
+        default=DEFAULT_RUN,
+        help="path to a run.json (default: the committed h100 substrate-shock run)",
+    )
+    show_parser.add_argument(
+        "--graph",
+        type=Path,
+        default=DEFAULT_GRAPH,
+        help="path to the bom graph used for human-readable node names",
+    )
+    show_parser.set_defaults(func=_show)
+
     run_parser = subparsers.add_parser("run", help="run a deterministic scenario playthrough")
     run_parser.add_argument("--graph", type=Path, default=DEFAULT_GRAPH)
     run_parser.add_argument("--scenario", type=Path, default=DEFAULT_SCENARIO)
@@ -45,6 +65,17 @@ def _validate(_args: argparse.Namespace) -> int:
     for message in messages:
         print(message)
     print("validation passed")
+    return 0
+
+
+def _show(args: argparse.Namespace) -> int:
+    if not args.run.is_file():
+        raise SystemExit(
+            f"no run found at {args.run} - run `python -m facility_war run` first"
+        )
+    sim_run = load_document(args.run)
+    graph = load_document(args.graph) if args.graph.is_file() else None
+    print(render_show(sim_run, graph=graph))
     return 0
 
 

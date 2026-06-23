@@ -24,6 +24,37 @@ python -m facility_war run \
   --out reports/2026-Q3-h100-substrate-shock/
 ```
 
+## try it
+
+one command, no args, reads the committed run and prints the result:
+
+```bash
+python -m facility_war show
+```
+
+```
+facility-war - supply-shock playthrough, 2026-Q3-h100-substrate-shock
+scenario taiwan_substrate_90d | 1000 trials | seed 42 | 26-week horizon | tier walk to 4
+
+1 bom item(s), ranked by expected weeks in 'red' (supply unavailable)
+
+bom item               exp red wks  of horizon  any-red prob  red share
+-----------------------------------------------------------------------
+h100 accelerator            13.00w         50%         100%        50%
+
+mitigation queue, ranked by expected red-week reduction:
+  1. dual_source on taiwan substrate supplier a - saves ~5.8 red weeks (...)
+  2. buffer      on h100 accelerator - saves ~4.0 red weeks (...)
+  3. redesign    on advanced package - saves ~3.9 red weeks (...)
+
+headline: h100 accelerator spends ~13 of 26 weeks unavailable under this shock;
+best single move is to dual_source taiwan substrate supplier a (~5.8 weeks back).
+```
+
+the point: a taiwan substrate shock idles the h100 accelerator for half the
+horizon, and `show` ranks the cheapest fix first so you act on the supplier that
+buys back the most weeks instead of guessing.
+
 ## included fixtures
 
 - `graphs/h100_bom.yaml`
@@ -48,8 +79,10 @@ the package entry points are:
 
 - `python -m facility_war validate`
 - `python -m facility_war run`
+- `python -m facility_war show`
 - `facility-war validate`
 - `facility-war run`
+- `facility-war show`
 
 ## license
 
