@@ -1,28 +1,25 @@
 # facility-war
 
-facility-war is a deterministic supply-shock playthrough for public
-supplier graphs. it loads a graph, loads a scenario, walks tiered
-dependencies up to tier 4, applies substitution edges, and writes a
-run record plus a markdown report.
+One Taiwan substrate supplier goes dark for 90 days, and the H100 accelerator
+spends 13 of the next 26 weeks unbuildable. Half the horizon, gone, traced back
+to a single node three tiers down the bill of materials. facility-war runs that
+playthrough and tells you which one move buys the most weeks back.
 
-## run
+## What it does
 
-validate the committed v0.1 fixture set:
+A supply shock doesn't stop at the component it hits. It walks. A substrate plant
+goes offline and the outage propagates up the dependency tree — substrate to
+package to accelerator — until it lands on the thing you actually ship. facility-war
+loads a supplier graph and a scenario, walks the tiered dependencies up to tier 4,
+applies the substitution edges that route around the damage, and runs a thousand
+Monte Carlo trials to get a distribution over outage weeks per BOM item.
 
-```bash
-python -m facility_war validate
-```
-
-run the h100 taiwan substrate scenario:
-
-```bash
-python -m facility_war run \
-  --graph graphs/h100_bom.yaml \
-  --scenario scenarios/taiwan_substrate_90d.yaml \
-  --trials 1000 \
-  --seed 42 \
-  --out reports/2026-Q3-h100-substrate-shock/
-```
+Then it ranks the fixes. Dual-sourcing the affected substrate supplier, buffering
+the accelerator, redesigning the package — each costs something, each buys back a
+different number of red weeks. The run writes a checked-in record plus a markdown
+report, and every number in it traces to a fixture, a scenario spec, or a backtest.
+The run is deterministic: explicit seed, fixed timestamp, same input gives the same
+report every time.
 
 ## try it
 
@@ -51,9 +48,8 @@ headline: h100 accelerator spends ~13 of 26 weeks unavailable under this shock;
 best single move is to dual_source taiwan substrate supplier a (~5.8 weeks back).
 ```
 
-the point: a taiwan substrate shock idles the h100 accelerator for half the
-horizon, and `show` ranks the cheapest fix first so you act on the supplier that
-buys back the most weeks instead of guessing.
+The mitigation queue is the point. A red-week count tells you how bad it is; the
+ranked queue tells you which supplier to fix first instead of guessing.
 
 ## live demo
 
@@ -72,6 +68,36 @@ deploy on streamlit community cloud: new app -> repo `AthenaTheOwl/facility-war`
 branch `main`, main file `streamlit_app.py`.
 
 <!-- live url: https://<your-app>.streamlit.app -->
+
+## how it connects
+
+facility-war is the war-game over the supply graph the rest of the portfolio
+already maps:
+
+- [chip-supply-chain-map](https://github.com/AthenaTheOwl/chip-supply-chain-map) —
+  the graph schema here is a derivative of it; this repo shocks the map that one
+  draws.
+- [semiconductor-wafer-robust-optimization](https://github.com/AthenaTheOwl/semiconductor-wafer-robust-optimization) —
+  the optimization side of the same silicon supply curve.
+
+## run
+
+validate the committed v0.1 fixture set:
+
+```bash
+python -m facility_war validate
+```
+
+run the h100 taiwan substrate scenario:
+
+```bash
+python -m facility_war run \
+  --graph graphs/h100_bom.yaml \
+  --scenario scenarios/taiwan_substrate_90d.yaml \
+  --trials 1000 \
+  --seed 42 \
+  --out reports/2026-Q3-h100-substrate-shock/
+```
 
 ## included fixtures
 
