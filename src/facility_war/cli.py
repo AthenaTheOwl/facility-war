@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import yaml
+
 from . import __version__
 from .simulator import (
     DEFAULT_GRAPH,
@@ -80,8 +82,16 @@ def _show(args: argparse.Namespace) -> int:
 
 
 def _run(args: argparse.Namespace) -> int:
-    graph = load_document(args.graph)
-    scenario = load_document(args.scenario)
+    # A path typo is the mainline mistake here, so name the input and what
+    # was expected rather than surfacing a raw traceback from load_document.
+    for label, path in (("graph", args.graph), ("scenario", args.scenario)):
+        if not path.is_file():
+            raise SystemExit(f"no {label} file at {path} - expected a readable yaml file")
+    try:
+        graph = load_document(args.graph)
+        scenario = load_document(args.scenario)
+    except (OSError, yaml.YAMLError) as error:
+        raise SystemExit(f"could not read graph/scenario yaml: {error}")
     sim_run = run_simulation(
         graph,
         scenario,
