@@ -114,8 +114,16 @@ python -m facility_war run \
 uv run pytest
 python scripts/voice_lint.py
 python scripts/validate_schemas.py
-python eval/calibration_brier.py
+python eval/backtest_2020_covid.py   # recompute the committed brier result
+python eval/calibration_brier.py     # gate: fails if missing, stale, or over ceiling
 ```
+
+the calibration gate scores the simulator's per-node disruption probability
+under `scenarios/covid_2020_supply_shock.yaml` against ten cited real outcomes
+of the 2020 covid supply shock (`eval/covid_2020_outcomes.yaml`). the committed
+brier is 0.098 against a 0.25 ceiling. the gate fails when the result file is
+absent, when it disagrees with a fresh recompute, or when the score is over the
+ceiling — there is no hardcoded fallback.
 
 ## package
 

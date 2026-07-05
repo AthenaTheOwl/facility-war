@@ -1,0 +1,33 @@
+scenario_id: covid_2020_supply_shock
+name: covid-2020 global supply shock
+trigger: >-
+  covid-19 pandemic disrupts global ocean logistics and tightens ic-substrate
+  material supply across 2020
+horizon_weeks: 52
+duration_weeks_distribution:
+  type: fixed_weeks
+  weeks: 40
+affected_geographies:
+  # logistics is the single best-documented 2020 supply disruption: blank
+  # sailings in h1, then port congestion and container imbalance in h2. the
+  # suez/ocean corridor node stands in for global freight in this fixture.
+  - geo_egypt
+affected_components:
+  # the 2020 ic-substrate constraint hit the material itself industry-wide, not
+  # one plant, so it is encoded as a component shock. both the abf substrate and
+  # the organic alternate are shocked because the shortage was broad enough that
+  # the substitution escape hatch did not actually exist in 2020.
+  - cmp_abf_substrate
+  - cmp_alt_substrate
+severity_distribution:
+  # 0.70: severe but not a total stop. logistics and substrate were badly
+  # constrained through 2020, not zeroed out.
+  type: fixed
+  value: 0.70
+substitution_severity_threshold: 0.3
+references:
+  - "footprint: global ocean-freight disruption 2020 (UNCTAD, Review of Maritime Transport 2020)"
+  - "footprint: ABF/IC build-up substrate shortage began 2020 (industry trade reporting)"
+  - "ground-truth outcomes + citations: eval/covid_2020_outcomes.yaml"
+  - "fixture graph: graphs/h100_bom.yaml"
+  - "this is a deterministic backtest scenario, not a monte-carlo playthrough"

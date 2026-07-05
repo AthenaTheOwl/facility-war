@@ -47,8 +47,12 @@ python scripts/validate_schemas.py
 python eval/calibration_brier.py
 ```
 
-The calibration gate fails when the simulator's Brier score on a
-historical backtest exceeds a configured ceiling.
+The calibration gate scores the live simulator's per-node disruption
+probability under the COVID-2020 scenario against cited real outcomes
+(`eval/covid_2020_outcomes.yaml`) with a Brier score. It fails when the
+result file is missing, when the committed score disagrees with a fresh
+recompute from the fixtures, or when the score exceeds the ceiling. No
+hardcoded fallback — the gate can actually fail.
 
 ## Out of scope
 

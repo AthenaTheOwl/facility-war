@@ -1,0 +1,84 @@
+{
+  "backtest_id": "covid_2020_supply_shock",
+  "brier_score": 0.0982,
+  "graph": "graphs/h100_bom.yaml",
+  "n_outcomes": 10,
+  "notes": "computed by eval/backtest_2020_covid.py from the fixture graph, the covid_2020 scenario, and cited outcomes; not a hardcoded value. see eval/covid_2020_outcomes.yaml for citations and caveats.",
+  "outcomes": "eval/covid_2020_outcomes.yaml",
+  "predictions": [
+    {
+      "actual": 1,
+      "node_id": "cmp_abf_substrate",
+      "predicted": 0.7,
+      "squared_error": 0.09,
+      "stands_for": "ABF (Ajinomoto build-up film) IC substrate"
+    },
+    {
+      "actual": 1,
+      "node_id": "cmp_advanced_package",
+      "predicted": 0.56,
+      "squared_error": 0.1936,
+      "stands_for": "advanced IC packaging / overall semiconductor availability"
+    },
+    {
+      "actual": 0,
+      "node_id": "cmp_gpu_die",
+      "predicted": 0.0,
+      "squared_error": 0.0,
+      "stands_for": "leading-edge logic wafer fabrication (GPU die)"
+    },
+    {
+      "actual": 1,
+      "node_id": "cmp_ocean_lane",
+      "predicted": 0.7,
+      "squared_error": 0.09,
+      "stands_for": "global ocean container shipping capacity"
+    },
+    {
+      "actual": 1,
+      "node_id": "cmp_pcie_board",
+      "predicted": 0.28,
+      "squared_error": 0.5184,
+      "stands_for": "electronics PCB / board assembly (China-centric)"
+    },
+    {
+      "actual": 0,
+      "node_id": "sup_arizona_test",
+      "predicted": 0.0,
+      "squared_error": 0.0,
+      "stands_for": "US (Arizona) semiconductor test / assembly capacity"
+    },
+    {
+      "actual": 0,
+      "node_id": "sup_japan_hbm",
+      "predicted": 0.0,
+      "squared_error": 0.0,
+      "stands_for": "Japan memory / semiconductor-materials supplier"
+    },
+    {
+      "actual": 1,
+      "node_id": "sup_suez_forwarder",
+      "predicted": 0.7,
+      "squared_error": 0.09,
+      "stands_for": "international freight forwarding / logistics services"
+    },
+    {
+      "actual": 0,
+      "node_id": "sup_taiwan_packaging",
+      "predicted": 0.0,
+      "squared_error": 0.0,
+      "stands_for": "Taiwan advanced packaging / OSAT"
+    },
+    {
+      "actual": 0,
+      "node_id": "sup_taiwan_substrate_a",
+      "predicted": 0.0,
+      "squared_error": 0.0,
+      "stands_for": "Taiwan fab / substrate supplier"
+    }
+  ],
+  "scenario": "scenarios/covid_2020_supply_shock.yaml",
+  "scenario_id": "covid_2020_supply_shock",
+  "severity": 0.7,
+  "threshold": 0.25
+}
