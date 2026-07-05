@@ -1,0 +1,106 @@
+# Ground-truth outcomes for the COVID-2020 supply-shock backtest.
+#
+# Each entry is a falsifiable binary claim about whether a supply-chain node
+# (or the real-world category it stands for) experienced a significant
+# COVID-driven disruption during calendar year 2020 — major output loss,
+# extended lead times, or capacity unavailability. outcome 1 = disrupted,
+# 0 = not significantly disrupted.
+#
+# The backtest scores the simulator's per-node disruption probability
+# (propagate_week node_risk under scenarios/covid_2020_supply_shock.yaml)
+# against these outcomes with a Brier score.
+#
+# HONEST CAVEATS (read before trusting the number):
+#   - The fixture graph graphs/h100_bom.yaml is a *synthetic* H100 BOM, and the
+#     H100 postdates 2020. Its nodes are used here as PROXIES for the real
+#     2020-era supply categories named in each `stands_for` field.
+#   - Outcomes are the author's encoding of public record. Citations are given
+#     per outcome; they are public-knowledge summaries, not primary datasets.
+#   - The graph has no China-manufacturing node, so the early-2020 China
+#     assembly shutdown (cmp_pcie_board below) is a known blind spot the model
+#     cannot represent — it shows up as the largest single miss in the score.
+
+backtest_id: covid_2020_supply_shock
+question: >-
+  Did this supply-chain node/category experience a significant COVID-driven
+  disruption during calendar year 2020?
+
+outcomes:
+  - node_id: cmp_ocean_lane
+    stands_for: global ocean container shipping capacity
+    outcome: 1
+    citation: >-
+      UNCTAD, Review of Maritime Transport 2020: pandemic cut container
+      shipping capacity via blank sailings in H1 then port congestion and
+      container imbalance in H2; Drewry World Container Index roughly doubled
+      over 2020.
+
+  - node_id: sup_suez_forwarder
+    stands_for: international freight forwarding / logistics services
+    outcome: 1
+    citation: >-
+      IATA 2020: air-cargo capacity fell ~20% as passenger belly-freight
+      collapsed; UNCTAD 2020 documents severe global forwarding disruption.
+      (This scores 2020 logistics generally, not the March-2021 Suez blockage.)
+
+  - node_id: cmp_abf_substrate
+    stands_for: ABF (Ajinomoto build-up film) IC substrate
+    outcome: 1
+    citation: >-
+      ABF/IC build-up substrate supply tightened sharply through 2020 as
+      demand outran capacity, opening a multi-year shortage (industry trade
+      reporting, e.g. DigiTimes 2020-2021; Ajinomoto capacity disclosures).
+
+  - node_id: cmp_advanced_package
+    stands_for: advanced IC packaging / overall semiconductor availability
+    outcome: 1
+    citation: >-
+      The global semiconductor shortage began in late 2020 with
+      packaging/substrate as a bottleneck; automakers reported MCU shortfalls
+      in Q4 2020 (SIA; contemporaneous reporting).
+
+  - node_id: cmp_pcie_board
+    stands_for: electronics PCB / board assembly (China-centric)
+    outcome: 1
+    citation: >-
+      China's official NBS manufacturing PMI fell to a record 35.7 in Feb 2020
+      as COVID shut Chinese electronics assembly. (Known model blind spot: the
+      fixture graph has no China node, so the simulator under-predicts here.)
+
+  - node_id: sup_taiwan_substrate_a
+    stands_for: Taiwan fab / substrate supplier
+    outcome: 0
+    citation: >-
+      Taiwan recorded near-zero domestic COVID transmission in 2020 and kept
+      fabs running; TSMC posted record FY2020 revenue (+25% YoY, ~+31% in USD).
+
+  - node_id: sup_taiwan_packaging
+    stands_for: Taiwan advanced packaging / OSAT
+    outcome: 0
+    citation: >-
+      Taiwanese OSAT/packaging operated without COVID shutdowns in 2020 (Taiwan
+      2020 near-zero community transmission; ASE / TSMC 2020 results).
+
+  - node_id: sup_japan_hbm
+    stands_for: Japan memory / semiconductor-materials supplier
+    outcome: 0
+    citation: >-
+      Japanese memory and semiconductor-materials output continued through
+      2020; DRAM/NAND supply was ample and spot prices soft in 2020
+      (TrendForce 2020 memory-market reviews).
+
+  - node_id: sup_arizona_test
+    stands_for: US (Arizona) semiconductor test / assembly capacity
+    outcome: 0
+    citation: >-
+      US semiconductor manufacturing was designated essential critical
+      infrastructure (CISA, Mar 2020) and operated through 2020 with protocols;
+      no major output loss at US fab/test sites.
+
+  - node_id: cmp_gpu_die
+    stands_for: leading-edge logic wafer fabrication (GPU die)
+    outcome: 0
+    citation: >-
+      Leading-edge foundry wafer output (predominantly Taiwan) rose in 2020;
+      late-2020 GPU end-product shortages were demand-driven, not a COVID
+      fab-supply disruption (TSMC FY2020 wafer-output growth).
