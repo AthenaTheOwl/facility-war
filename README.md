@@ -77,7 +77,7 @@ already maps:
 - [chip-supply-chain-map](https://github.com/AthenaTheOwl/chip-supply-chain-map) —
   the graph schema here is a derivative of it; this repo shocks the map that one
   draws.
-- [semiconductor-wafer-robust-optimization](https://github.com/AthenaTheOwl/semiconductor-wafer-robust-optimization) —
+- [semiconductor-e2e-manufacturing-optimization](https://github.com/AthenaTheOwl/semiconductor-e2e-manufacturing-optimization) —
   the optimization side of the same silicon supply curve.
 
 ## run
