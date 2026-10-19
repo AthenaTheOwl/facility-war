@@ -139,3 +139,7 @@ the package entry points are:
 ## license
 
 mit. see `LICENSE`.
+
+## Method update
+
+[Compare mitigation on a shared shock draw](docs/mitigation-under-common-shocks.md).
