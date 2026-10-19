@@ -136,10 +136,10 @@ the package entry points are:
 - `facility-war run`
 - `facility-war show`
 
+## Method update
+
+[October method update: Compare mitigation on a shared shock draw](docs/mitigation-under-common-shocks.md).
+
 ## license
 
 mit. see `LICENSE`.
-
-## Method update
-
-[Compare mitigation on a shared shock draw](docs/mitigation-under-common-shocks.md).
