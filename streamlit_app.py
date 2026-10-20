@@ -116,7 +116,10 @@ for bom_id, dist in ranked:
 st.dataframe(bom_rows, use_container_width=True, hide_index=True)
 
 # --- mitigation queue with one interactive control --------------------------
-st.markdown("##### mitigation queue, ranked by expected red-week reduction")
+st.markdown(
+    "##### mitigation queue, ranked by expected red-week reduction "
+    "(each fix re-simulated on the same shock draws)"
+)
 if mitigations:
     max_saving = max(m.get("expected_reduction_weeks", 0.0) for m in mitigations)
     min_saving = st.slider(
@@ -173,7 +176,9 @@ st.caption(
     "this section does not read the committed run. it builds a scenario from your "
     "inputs and calls the real monte-carlo engine "
     "(`facility_war.simulator.run_simulation`) live against the committed h100 bom "
-    "graph — the same function that produced `run.json`."
+    "graph — the same function that produced `run.json`. your severity and duration "
+    "are single fixed values, so every trial draws the same shock (the deterministic "
+    "single-point mode); the committed run samples both from ranges."
 )
 
 

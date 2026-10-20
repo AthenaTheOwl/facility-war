@@ -4,6 +4,7 @@ import hashlib
 import json
 import random
 from collections import Counter, defaultdict
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -195,6 +196,81 @@ def propagate_week(
     }
 
 
+# Response assumptions used when a mitigation is re-simulated. A scenario can
+# override any of them under `mitigation_assumptions`. They are planning
+# assumptions, not sourced lead times.
+DEFAULT_MITIGATION_ASSUMPTIONS: dict[str, float] = {
+    # weeks before a second source outside the shocked geography can ship
+    "dual_source_qualification_weeks": 6,
+    # weeks of finished-goods stock held for the most exposed bom item
+    "buffer_weeks": 4,
+    # weeks before a redesigned part that avoids the shocked component ships
+    "redesign_lead_weeks": 12,
+    # risk left on a component once a qualified alternate covers it
+    "post_mitigation_risk": 0.20,
+}
+MITIGATION_METHOD = (
+    "each mitigation is applied as a graph or stock change and re-simulated "
+    "on the baseline's shock draws (common random numbers)"
+)
+MITIGATION_GEOGRAPHY = "geo_mitigation_outside_shock"
+
+
+def mitigation_assumptions(scenario: dict[str, Any]) -> dict[str, float]:
+    merged = dict(DEFAULT_MITIGATION_ASSUMPTIONS)
+    merged.update(scenario.get("mitigation_assumptions") or {})
+    return merged
+
+
+def draw_shocks(
+    scenario: dict[str, Any],
+    *,
+    trial_count: int,
+    seed: int,
+) -> list[tuple[int, float]]:
+    """Draw (duration_weeks, severity) once per trial.
+
+    The baseline and every mitigation are scored on this one list, so a
+    mitigation's saving is a paired difference on identical shocks.
+    """
+
+    draws: list[tuple[int, float]] = []
+    for trial_index in range(trial_count):
+        rng = random.Random(_trial_seed(seed, trial_index))
+        duration = int(round(_sample_distribution(scenario["duration_weeks_distribution"], rng)))
+        severity = float(_sample_distribution(scenario["severity_distribution"], rng))
+        draws.append((max(duration, 0), severity))
+    return draws
+
+
+class _StatusCache:
+    """Memoise bom-item statuses per (graph variant, active severity)."""
+
+    def __init__(self, scenario: dict[str, Any], max_tier: int) -> None:
+        self._scenario = scenario
+        self._max_tier = max_tier
+        self._cache: dict[tuple[str, float], dict[str, str]] = {}
+
+    def statuses(self, key: str, graph: dict[str, Any], severity: float) -> dict[str, str]:
+        cache_key = (key, severity)
+        if cache_key not in self._cache:
+            self._cache[cache_key] = propagate_week(
+                graph,
+                self._scenario,
+                severity,
+                max_tier=self._max_tier,
+            )["bom_item_status"]
+        return self._cache[cache_key]
+
+
+def _summarise(values: list[float]) -> dict[str, float]:
+    return {
+        "min": round(min(values), 4),
+        "mean": round(sum(values) / len(values), 4),
+        "max": round(max(values), 4),
+    }
+
+
 def run_simulation(
     graph: dict[str, Any],
     scenario: dict[str, Any],
@@ -216,28 +292,24 @@ def run_simulation(
     ]
     outage_histograms: dict[str, Counter[int]] = {bom_item: Counter() for bom_item in bom_items}
     status_counts: dict[str, Counter[str]] = {bom_item: Counter() for bom_item in bom_items}
+    draws = draw_shocks(scenario, trial_count=trial_count, seed=seed)
+    cache = _StatusCache(scenario, max_tier)
+    baseline_red_weeks: dict[str, list[int]] = {bom_item: [] for bom_item in bom_items}
 
-    for trial_index in range(trial_count):
-        rng = random.Random(_trial_seed(seed, trial_index))
-        duration = int(round(_sample_distribution(scenario["duration_weeks_distribution"], rng)))
-        severity = float(_sample_distribution(scenario["severity_distribution"], rng))
+    for duration, severity in draws:
         trial_red_weeks = {bom_item: 0 for bom_item in bom_items}
 
         for week in range(1, horizon_weeks + 1):
             active_severity = severity if week <= duration else 0.0
-            week_result = propagate_week(
-                graph,
-                scenario,
-                active_severity,
-                max_tier=max_tier,
-            )
-            for bom_item, status in week_result["bom_item_status"].items():
+            week_status = cache.statuses("baseline", graph, active_severity)
+            for bom_item, status in week_status.items():
                 status_counts[bom_item][status] += 1
                 if status == "red":
                     trial_red_weeks[bom_item] += 1
 
         for bom_item, red_weeks in trial_red_weeks.items():
             outage_histograms[bom_item][red_weeks] += 1
+            baseline_red_weeks[bom_item].append(red_weeks)
 
     distributions: dict[str, dict[str, Any]] = {}
     for bom_item in bom_items:
@@ -268,17 +340,253 @@ def run_simulation(
         "finished_at": FIXED_FINISHED_AT,
         "max_tier": max_tier,
         "horizon_weeks": horizon_weeks,
+        "shock_draw_summary": {
+            "duration_weeks": _summarise([float(duration) for duration, _ in draws]),
+            "severity": _summarise([severity for _, severity in draws]),
+        },
         "per_bom_item_distribution": distributions,
-        "mitigation_candidates": _rank_mitigations(graph, scenario, distributions),
+        "mitigation_method": MITIGATION_METHOD,
+        "mitigation_candidates": _rank_mitigations(
+            graph,
+            scenario,
+            distributions,
+            draws=draws,
+            baseline_red_weeks=baseline_red_weeks,
+            horizon_weeks=horizon_weeks,
+            cache=cache,
+        ),
     }
     return sim_run
+
+
+def _affected_suppliers(graph: dict[str, Any], scenario: dict[str, Any]) -> list[str]:
+    """Suppliers located in a shocked geography, sorted by id.
+
+    Sorting makes the candidate set independent of the order of edges in the
+    graph file.
+    """
+
+    affected_geographies = set(scenario["affected_geographies"])
+    return sorted(
+        {
+            edge["from"]
+            for edge in graph["edges"]
+            if edge["type"] == "located_in" and edge["to"] in affected_geographies
+        }
+    )
+
+
+def _add_alternate(
+    graph: dict[str, Any],
+    component_id: str,
+    alternate_id: str,
+    *,
+    drop_sources: set[str],
+    alternate_supplier: str | None,
+    supplier_criticality: float,
+    post_risk: float,
+) -> None:
+    """Add `alternate_id` as a substitute for `component_id`, in place.
+
+    The alternate inherits every supplies/depends_on input of the original
+    except those from `drop_sources`, so an upstream node the two share can
+    still take both down together.
+    """
+
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    original = nodes[component_id]
+    graph["nodes"].append(
+        {
+            "id": alternate_id,
+            "type": "component",
+            "name": f"{original.get('name', component_id)} (alternate)",
+            "tier": original.get("tier", 1),
+        }
+    )
+    inherited = [
+        dict(edge, to=alternate_id)
+        for edge in graph["edges"]
+        if edge["to"] == component_id
+        and edge["type"] in {"supplies", "depends_on"}
+        and edge["from"] not in drop_sources
+    ]
+    graph["edges"].extend(inherited)
+    if alternate_supplier is not None:
+        graph["edges"].append(
+            {
+                "from": alternate_supplier,
+                "to": alternate_id,
+                "type": "supplies",
+                "criticality": supplier_criticality,
+            }
+        )
+    graph["edges"].append(
+        {
+            "from": alternate_id,
+            "to": component_id,
+            "type": "substitutes_for",
+            "max_substitutable_severity": 1.0,
+            "post_substitution_risk": post_risk,
+        }
+    )
+
+
+def _ensure_mitigation_geography(graph: dict[str, Any]) -> None:
+    if not any(node["id"] == MITIGATION_GEOGRAPHY for node in graph["nodes"]):
+        graph["nodes"].append(
+            {
+                "id": MITIGATION_GEOGRAPHY,
+                "type": "geography",
+                "name": "geography outside the shock",
+            }
+        )
+
+
+def dual_source_graph(
+    graph: dict[str, Any],
+    supplier_id: str,
+    *,
+    post_risk: float = DEFAULT_MITIGATION_ASSUMPTIONS["post_mitigation_risk"],
+) -> dict[str, Any]:
+    """Graph with a second source for everything `supplier_id` supplies."""
+
+    mitigated = deepcopy(graph)
+    _ensure_mitigation_geography(mitigated)
+    alternate_supplier = f"{supplier_id}__second_source"
+    supplier = next(node for node in graph["nodes"] if node["id"] == supplier_id)
+    mitigated["nodes"].append(
+        {
+            "id": alternate_supplier,
+            "type": "supplier",
+            "name": f"{supplier.get('name', supplier_id)} (second source)",
+            "tier": supplier.get("tier", 1),
+        }
+    )
+    mitigated["edges"].append(
+        {"from": alternate_supplier, "to": MITIGATION_GEOGRAPHY, "type": "located_in"}
+    )
+    supplied = sorted(
+        {
+            (edge["to"], float(edge.get("criticality", 1.0)))
+            for edge in graph["edges"]
+            if edge["type"] == "supplies" and edge["from"] == supplier_id
+        }
+    )
+    for component_id, criticality in supplied:
+        _add_alternate(
+            mitigated,
+            component_id,
+            f"{component_id}__second_source_{supplier_id}",
+            drop_sources={supplier_id},
+            alternate_supplier=alternate_supplier,
+            supplier_criticality=criticality,
+            post_risk=post_risk,
+        )
+    return mitigated
+
+
+def redesign_graph(
+    graph: dict[str, Any],
+    scenario: dict[str, Any],
+    component_id: str,
+    *,
+    post_risk: float = DEFAULT_MITIGATION_ASSUMPTIONS["post_mitigation_risk"],
+) -> dict[str, Any]:
+    """Graph with a redesigned substitute for `component_id`.
+
+    The redesigned part drops inputs from suppliers inside the shocked
+    geography and keeps every other input of the original.
+    """
+
+    mitigated = deepcopy(graph)
+    _add_alternate(
+        mitigated,
+        component_id,
+        f"{component_id}__redesign",
+        drop_sources=set(_affected_suppliers(graph, scenario)),
+        alternate_supplier=None,
+        supplier_criticality=1.0,
+        post_risk=post_risk,
+    )
+    return mitigated
+
+
+def _mitigated_red_weeks(
+    *,
+    bom_item: str,
+    draws: list[tuple[int, float]],
+    horizon_weeks: int,
+    cache: _StatusCache,
+    baseline_graph: dict[str, Any],
+    mitigated_key: str | None = None,
+    mitigated_graph: dict[str, Any] | None = None,
+    effective_after_weeks: int = 0,
+    buffer_weeks: int = 0,
+) -> list[int]:
+    red_weeks_per_trial: list[int] = []
+    for duration, severity in draws:
+        red_weeks = 0
+        buffer_left = buffer_weeks
+        for week in range(1, horizon_weeks + 1):
+            active_severity = severity if week <= duration else 0.0
+            if mitigated_graph is not None and week > effective_after_weeks:
+                status = cache.statuses(mitigated_key or "mitigated", mitigated_graph, active_severity)
+            else:
+                status = cache.statuses("baseline", baseline_graph, active_severity)
+            if status[bom_item] != "red":
+                continue
+            if buffer_left > 0:
+                buffer_left -= 1
+                continue
+            red_weeks += 1
+        red_weeks_per_trial.append(red_weeks)
+    return red_weeks_per_trial
+
+
+def _candidate(
+    *,
+    mitigation_id: str,
+    kind: str,
+    target: str,
+    rationale: str,
+    effective_after_weeks: int,
+    bom_item: str,
+    baseline: list[int],
+    mitigated: list[int],
+) -> dict[str, Any]:
+    trials = len(baseline)
+    saved = sum(before - after for before, after in zip(baseline, mitigated)) / trials
+    return {
+        "mitigation_id": mitigation_id,
+        "type": kind,
+        "target": target,
+        "evaluated_bom_item": bom_item,
+        "expected_reduction_weeks": round(saved, 4),
+        "effective_after_weeks": effective_after_weeks,
+        "residual_expected_red_weeks": round(sum(mitigated) / trials, 4),
+        "residual_probability_any_red_week": round(
+            sum(1 for weeks in mitigated if weeks > 0) / trials, 4
+        ),
+        "rationale": rationale,
+    }
 
 
 def _rank_mitigations(
     graph: dict[str, Any],
     scenario: dict[str, Any],
     distributions: dict[str, dict[str, Any]],
+    *,
+    draws: list[tuple[int, float]],
+    baseline_red_weeks: dict[str, list[int]],
+    horizon_weeks: int,
+    cache: _StatusCache,
 ) -> list[dict[str, Any]]:
+    """Re-simulate each mitigation on the baseline's shock draws.
+
+    Every candidate is scored on the most exposed bom item (ties broken by
+    id) as the paired mean of baseline red weeks minus mitigated red weeks.
+    """
+
     if not distributions:
         return []
 
@@ -286,43 +594,83 @@ def _rank_mitigations(
         sorted(distributions),
         key=lambda item: distributions[item]["expected_red_weeks"],
     )
-    top_expected = float(distributions[top_bom]["expected_red_weeks"])
+    baseline = baseline_red_weeks[top_bom]
+    assumptions = mitigation_assumptions(scenario)
+    post_risk = float(assumptions["post_mitigation_risk"])
+    qualification = int(assumptions["dual_source_qualification_weeks"])
+    redesign_lead = int(assumptions["redesign_lead_weeks"])
+    buffer_weeks = int(assumptions["buffer_weeks"])
     index = _indices(graph)
-    affected_geographies = set(scenario["affected_geographies"])
+    common = {
+        "bom_item": top_bom,
+        "draws": draws,
+        "horizon_weeks": horizon_weeks,
+        "cache": cache,
+        "baseline_graph": graph,
+    }
 
-    affected_supplier = None
-    for edge in graph["edges"]:
-        if edge["type"] == "located_in" and edge["to"] in affected_geographies:
-            affected_supplier = edge["from"]
-            break
-
-    affected_component = scenario["affected_components"][0] if scenario["affected_components"] else None
-
-    candidates = [
-        {
-            "mitigation_id": "dual-source-highest-geography-hit",
-            "type": "dual_source",
-            "target": affected_supplier or affected_component or top_bom,
-            "expected_reduction_weeks": round(top_expected * 0.45, 4),
-            "rationale": "adds a checked supplier outside the affected geography",
-        },
-        {
-            "mitigation_id": "buffer-top-bom-item",
-            "type": "buffer",
-            "target": top_bom,
-            "expected_reduction_weeks": round(min(top_expected, 4.0), 4),
-            "rationale": "covers early red weeks for the most exposed bom item",
-        },
-    ]
-    if affected_component and affected_component in index["nodes"]:
+    candidates: list[dict[str, Any]] = []
+    for supplier_id in _affected_suppliers(graph, scenario):
+        key = f"dual_source:{supplier_id}"
+        mitigated = _mitigated_red_weeks(
+            mitigated_key=key,
+            mitigated_graph=dual_source_graph(graph, supplier_id, post_risk=post_risk),
+            effective_after_weeks=qualification,
+            **common,
+        )
         candidates.append(
-            {
-                "mitigation_id": "redesign-affected-component",
-                "type": "redesign",
-                "target": affected_component,
-                "expected_reduction_weeks": round(top_expected * 0.30, 4),
-                "rationale": "moves demand away from the directly affected component",
-            }
+            _candidate(
+                mitigation_id=f"dual-source-{supplier_id}",
+                kind="dual_source",
+                target=supplier_id,
+                rationale=(
+                    "second source outside the shocked geography for what this "
+                    f"supplier ships, qualified after {qualification} weeks"
+                ),
+                effective_after_weeks=qualification,
+                bom_item=top_bom,
+                baseline=baseline,
+                mitigated=mitigated,
+            )
+        )
+
+    candidates.append(
+        _candidate(
+            mitigation_id=f"buffer-{top_bom}",
+            kind="buffer",
+            target=top_bom,
+            rationale=f"{buffer_weeks} weeks of stock, drawn down in red weeks",
+            effective_after_weeks=0,
+            bom_item=top_bom,
+            baseline=baseline,
+            mitigated=_mitigated_red_weeks(buffer_weeks=buffer_weeks, **common),
+        )
+    )
+
+    for component_id in sorted(set(scenario["affected_components"])):
+        if component_id not in index["nodes"]:
+            continue
+        key = f"redesign:{component_id}"
+        mitigated = _mitigated_red_weeks(
+            mitigated_key=key,
+            mitigated_graph=redesign_graph(graph, scenario, component_id, post_risk=post_risk),
+            effective_after_weeks=redesign_lead,
+            **common,
+        )
+        candidates.append(
+            _candidate(
+                mitigation_id=f"redesign-{component_id}",
+                kind="redesign",
+                target=component_id,
+                rationale=(
+                    "redesigned part without inputs from the shocked geography, "
+                    f"shipping after {redesign_lead} weeks"
+                ),
+                effective_after_weeks=redesign_lead,
+                bom_item=top_bom,
+                baseline=baseline,
+                mitigated=mitigated,
+            )
         )
 
     return sorted(
@@ -351,14 +699,33 @@ def render_report(
         )
 
     mitigation_rows = [
-        "| {rank} | {kind} | {target} | {weeks:.2f} |".format(
+        "| {rank} | {kind} | {target} | {weeks:.2f} | {effective} | {residual} |".format(
             rank=rank,
             kind=item["type"],
             target=item["target"],
             weeks=item["expected_reduction_weeks"],
+            effective=item.get("effective_after_weeks", "n/a"),
+            residual=(
+                f"{item['residual_expected_red_weeks']:.2f}"
+                if "residual_expected_red_weeks" in item
+                else "n/a"
+            ),
         )
         for rank, item in enumerate(sim_run["mitigation_candidates"], start=1)
     ]
+    draw_summary = sim_run.get("shock_draw_summary")
+    draw_lines = []
+    if draw_summary:
+        duration = draw_summary["duration_weeks"]
+        severity = draw_summary["severity"]
+        draw_lines = [
+            "- sampled shock duration: min `{min:g}`, mean `{mean:g}`, max `{max:g}` weeks.".format(**duration),
+            "- sampled shock severity: min `{min:g}`, mean `{mean:g}`, max `{max:g}`.".format(**severity),
+        ]
+    method = sim_run.get(
+        "mitigation_method",
+        "the run does not record how the mitigation reductions were computed",
+    )
 
     return "\n".join(
         [
@@ -373,6 +740,7 @@ def render_report(
             f"- scenario: `{Path(scenario_path).as_posix()}` with id `{sim_run['scenario_id']}`.",
             f"- trials: `{sim_run['trial_count']}`. seed: `{sim_run['seed']}`. horizon: `{sim_run['horizon_weeks']}` weeks.",
             f"- traversal cap: tier `{sim_run['max_tier']}` from each bom item to upstream nodes.",
+            *draw_lines,
             "",
             "## outage distribution",
             "",
@@ -384,15 +752,16 @@ def render_report(
             "",
             "## mitigation queue",
             "",
-            "the simulator ranks candidates by expected red-week reduction in `run.json`.",
+            f"the simulator ranks candidates by expected red-week reduction in `run.json`. {method}.",
+            "lead times, buffer size and post-mitigation risk are the scenario's `mitigation_assumptions`, not sourced figures.",
             "",
-            "| rank | type | target | expected red-week reduction |",
-            "|---:|---|---|---:|",
+            "| rank | type | target | expected red-week reduction | effective after week | residual expected red weeks |",
+            "|---:|---|---|---:|---:|---:|",
             *mitigation_rows,
             "",
             "## interpretation",
             "",
-            "the run treats a taiwan geography shock as active for each sampled scenario week. suppliers located in `geo_taiwan` degrade first, then the tier walk carries the risk through supplies and depends_on edges. substitution edges can keep a component green when the substitute is below the scenario threshold.",
+            "each trial draws one shock duration and one severity from the scenario's distributions; the shock is active from week 1 through the sampled duration. suppliers located in `geo_taiwan` degrade first, then the tier walk carries the risk through supplies and depends_on edges. substitution edges can keep a component green when the substitute is below the scenario threshold. a second source counts only when its inputs avoid the shocked nodes; an alternate that shares an upstream node with the original fails with it.",
             "",
         ]
     )
@@ -429,6 +798,15 @@ def render_show(sim_run: dict[str, Any], *, graph: dict[str, Any] | None = None)
         f"{sim_run.get('trial_count', 0)} trials | seed {sim_run.get('seed', '?')} | "
         f"{horizon}-week horizon | tier walk to {sim_run.get('max_tier', '?')}"
     )
+    draw_summary = sim_run.get("shock_draw_summary")
+    if draw_summary:
+        duration = draw_summary["duration_weeks"]
+        severity = draw_summary["severity"]
+        lines.append(
+            f"sampled shock: {duration['min']:g}-{duration['max']:g} weeks "
+            f"(mean {duration['mean']:.1f}), severity {severity['min']:.2f}-"
+            f"{severity['max']:.2f} (mean {severity['mean']:.2f})"
+        )
     lines.append("")
     lines.append(
         f"{len(ranked)} bom item(s), ranked by expected weeks in 'red' (supply unavailable)"
@@ -456,7 +834,14 @@ def render_show(sim_run: dict[str, Any], *, graph: dict[str, Any] | None = None)
     mitigations = sim_run.get("mitigation_candidates", [])
     if mitigations:
         lines.append("")
-        lines.append("mitigation queue, ranked by expected red-week reduction:")
+        lines.append(
+            "mitigation queue, ranked by expected red-week reduction "
+            + (
+                "(re-simulated on the same shock draws):"
+                if sim_run.get("mitigation_method")
+                else "(method not recorded in this run):"
+            )
+        )
         for rank, item in enumerate(mitigations, start=1):
             lines.append(
                 f"  {rank}. {item.get('type', '?'):<11} on {label(item.get('target', '?'))} "
