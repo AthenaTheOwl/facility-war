@@ -5,27 +5,51 @@
   "max_tier": 4,
   "mitigation_candidates": [
     {
-      "expected_reduction_weeks": 5.85,
-      "mitigation_id": "dual-source-highest-geography-hit",
-      "rationale": "adds a checked supplier outside the affected geography",
-      "target": "sup_taiwan_substrate_a",
+      "effective_after_weeks": 6,
+      "evaluated_bom_item": "bom_h100_accelerator",
+      "expected_reduction_weeks": 7.0,
+      "mitigation_id": "dual-source-sup_taiwan_packaging",
+      "rationale": "second source outside the shocked geography for what this supplier ships, qualified after 6 weeks",
+      "residual_expected_red_weeks": 6.0,
+      "residual_probability_any_red_week": 1.0,
+      "target": "sup_taiwan_packaging",
       "type": "dual_source"
     },
     {
+      "effective_after_weeks": 0,
+      "evaluated_bom_item": "bom_h100_accelerator",
       "expected_reduction_weeks": 4.0,
-      "mitigation_id": "buffer-top-bom-item",
-      "rationale": "covers early red weeks for the most exposed bom item",
+      "mitigation_id": "buffer-bom_h100_accelerator",
+      "rationale": "4 weeks of stock, drawn down in red weeks",
+      "residual_expected_red_weeks": 9.0,
+      "residual_probability_any_red_week": 1.0,
       "target": "bom_h100_accelerator",
       "type": "buffer"
     },
     {
-      "expected_reduction_weeks": 3.9,
-      "mitigation_id": "redesign-affected-component",
-      "rationale": "moves demand away from the directly affected component",
+      "effective_after_weeks": 12,
+      "evaluated_bom_item": "bom_h100_accelerator",
+      "expected_reduction_weeks": 1.0,
+      "mitigation_id": "redesign-cmp_advanced_package",
+      "rationale": "redesigned part without inputs from the shocked geography, shipping after 12 weeks",
+      "residual_expected_red_weeks": 12.0,
+      "residual_probability_any_red_week": 1.0,
       "target": "cmp_advanced_package",
       "type": "redesign"
+    },
+    {
+      "effective_after_weeks": 6,
+      "evaluated_bom_item": "bom_h100_accelerator",
+      "expected_reduction_weeks": 0.0,
+      "mitigation_id": "dual-source-sup_taiwan_substrate_a",
+      "rationale": "second source outside the shocked geography for what this supplier ships, qualified after 6 weeks",
+      "residual_expected_red_weeks": 13.0,
+      "residual_probability_any_red_week": 1.0,
+      "target": "sup_taiwan_substrate_a",
+      "type": "dual_source"
     }
   ],
+  "mitigation_method": "each mitigation is applied as a graph or stock change and re-simulated on the baseline's shock draws (common random numbers)",
   "per_bom_item_distribution": {
     "bom_h100_accelerator": {
       "expected_red_weeks": 13.0,
@@ -43,6 +67,18 @@
   "run_id": "2026-Q3-h100-substrate-shock",
   "scenario_id": "taiwan_substrate_90d",
   "seed": 42,
+  "shock_draw_summary": {
+    "duration_weeks": {
+      "max": 13.0,
+      "mean": 13.0,
+      "min": 13.0
+    },
+    "severity": {
+      "max": 0.92,
+      "mean": 0.92,
+      "min": 0.92
+    }
+  },
   "started_at": "2026-06-22T00:00:00Z",
   "trial_count": 1000
 }

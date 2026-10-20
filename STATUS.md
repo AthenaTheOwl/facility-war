@@ -9,8 +9,10 @@ published report directory.
 ## Known limits
 
 the fixture graph is small and public. trial sampling covers duration
-and severity only. mitigation ranking uses simple expected red-week
-reduction estimates.
+and severity only. mitigation ranking re-simulates each fix as a graph
+or stock change on the baseline's shock draws. the lead times, buffer size
+and post-mitigation risk are planning assumptions, and no mitigation cost
+is modeled.
 
 the calibration gate now runs a real backtest. `eval/backtest_2020_covid.py`
 asks the live simulator for a per-node disruption probability under

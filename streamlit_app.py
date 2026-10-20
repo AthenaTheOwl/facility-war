@@ -116,7 +116,10 @@ for bom_id, dist in ranked:
 st.dataframe(bom_rows, use_container_width=True, hide_index=True)
 
 # --- mitigation queue with one interactive control --------------------------
-st.markdown("##### mitigation queue, ranked by expected red-week reduction")
+st.markdown(
+    "##### mitigation queue, ranked by expected red-week reduction "
+    "(each fix re-simulated on the same shock draws)"
+)
 if mitigations:
     max_saving = max(m.get("expected_reduction_weeks", 0.0) for m in mitigations)
     min_saving = st.slider(

@@ -48,6 +48,19 @@
       "type": "integer",
       "minimum": 1
     },
+    "shock_draw_summary": {
+      "type": "object",
+      "required": ["duration_weeks", "severity"],
+      "additionalProperties": false,
+      "properties": {
+        "duration_weeks": {
+          "$ref": "#/$defs/draw_summary"
+        },
+        "severity": {
+          "$ref": "#/$defs/draw_summary"
+        }
+      }
+    },
     "per_bom_item_distribution": {
       "type": "object",
       "minProperties": 1,
@@ -102,6 +115,10 @@
         }
       }
     },
+    "mitigation_method": {
+      "type": "string",
+      "minLength": 1
+    },
     "mitigation_candidates": {
       "type": "array",
       "items": {
@@ -129,9 +146,43 @@
             "type": "number",
             "minimum": 0
           },
+          "evaluated_bom_item": {
+            "type": "string"
+          },
+          "effective_after_weeks": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "residual_expected_red_weeks": {
+            "type": "number",
+            "minimum": 0
+          },
+          "residual_probability_any_red_week": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
           "rationale": {
             "type": "string"
           }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "draw_summary": {
+      "type": "object",
+      "required": ["min", "mean", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "mean": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
         }
       }
     }

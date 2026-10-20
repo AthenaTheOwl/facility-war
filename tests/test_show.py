@@ -31,7 +31,8 @@ def test_render_show_is_readable() -> None:
         "h100 accelerator            13.00w         50%         100%        50%"
         in text
     )
-    assert "(~5.8 weeks back)." in text
+    assert "re-simulated on the same shock draws" in text
+    assert "dual_source taiwan advanced packaging supplier (~7.0 weeks back)." in text
 
 
 def test_show_command_exits_zero(capsys) -> None:
