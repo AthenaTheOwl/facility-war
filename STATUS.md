@@ -9,9 +9,11 @@ published report directory.
 ## Known limits
 
 the fixture graph is small and public. trial sampling covers duration
-and severity only. mitigation ranking re-simulates each fix as a graph
+and severity only; the taiwan scenario samples both from triangular
+planning ranges, while the suez, arizona and covid scenarios are fixed
+single-point shocks. mitigation ranking re-simulates each fix as a graph
 or stock change on the baseline's shock draws. the lead times, buffer size
-and post-mitigation risk are planning assumptions, and no mitigation cost
+and post-mitigation risk are scenario assumptions, and no mitigation cost
 is modeled.
 
 the calibration gate now runs a real backtest. `eval/backtest_2020_covid.py`

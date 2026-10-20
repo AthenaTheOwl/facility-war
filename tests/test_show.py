@@ -23,16 +23,17 @@ def test_render_show_is_readable() -> None:
     # surfaces the ranked mitigation queue and a headline
     assert "mitigation queue" in text
     assert "headline:" in text
-    # pin the derived numbers so drift in the of-horizon percent (13.0/26)
+    # pin the derived numbers so drift in the of-horizon percent (13.96/26)
     # or the headline weeks-back figure is caught. the whole data row is
-    # pinned because the of-horizon "50%" shares its digits with the red-share
+    # pinned because the of-horizon "54%" shares its digits with the red-share
     # column, so a positional literal is what actually bites.
     assert (
-        "h100 accelerator            13.00w         50%         100%        50%"
+        "h100 accelerator            13.96w         54%          94%        54%"
         in text
     )
+    assert "sampled shock: 6-25 weeks" in text
     assert "re-simulated on the same shock draws" in text
-    assert "dual_source taiwan advanced packaging supplier (~7.0 weeks back)." in text
+    assert "dual_source taiwan advanced packaging supplier (~7.6 weeks back)." in text
 
 
 def test_show_command_exits_zero(capsys) -> None:

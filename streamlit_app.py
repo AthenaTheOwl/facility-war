@@ -176,7 +176,9 @@ st.caption(
     "this section does not read the committed run. it builds a scenario from your "
     "inputs and calls the real monte-carlo engine "
     "(`facility_war.simulator.run_simulation`) live against the committed h100 bom "
-    "graph — the same function that produced `run.json`."
+    "graph — the same function that produced `run.json`. your severity and duration "
+    "are single fixed values, so every trial draws the same shock (the deterministic "
+    "single-point mode); the committed run samples both from ranges."
 )
 
 

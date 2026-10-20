@@ -9,8 +9,8 @@ source files: `graphs/h100_bom.yaml`, `scenarios/taiwan_substrate_90d.yaml`, and
 - scenario: `scenarios/taiwan_substrate_90d.yaml` with id `taiwan_substrate_90d`.
 - trials: `1000`. seed: `42`. horizon: `26` weeks.
 - traversal cap: tier `4` from each bom item to upstream nodes.
-- sampled shock duration: min `13`, mean `13`, max `13` weeks.
-- sampled shock severity: min `0.92`, mean `0.92`, max `0.92`.
+- sampled shock duration: min `6`, mean `14.879`, max `25` weeks.
+- sampled shock severity: min `0.6127`, mean `0.8442`, max `0.9968`.
 
 ## outage distribution
 
@@ -18,7 +18,7 @@ all values in this table are read from `run.json`.
 
 | bom item | expected red weeks | chance of any red week | most common red-week count |
 |---|---:|---:|---:|
-| bom_h100_accelerator | 13.00 | 100.00% | 13 |
+| bom_h100_accelerator | 13.96 | 94.00% | 13 |
 
 ## mitigation queue
 
@@ -27,10 +27,10 @@ lead times, buffer size and post-mitigation risk are the scenario's `mitigation_
 
 | rank | type | target | expected red-week reduction | effective after week | residual expected red weeks |
 |---:|---|---|---:|---:|---:|
-| 1 | dual_source | sup_taiwan_packaging | 7.00 | 6 | 6.00 |
-| 2 | buffer | bom_h100_accelerator | 4.00 | 0 | 9.00 |
-| 3 | redesign | cmp_advanced_package | 1.00 | 12 | 12.00 |
-| 4 | dual_source | sup_taiwan_substrate_a | 0.00 | 6 | 13.00 |
+| 1 | dual_source | sup_taiwan_packaging | 7.62 | 6 | 6.34 |
+| 2 | buffer | bom_h100_accelerator | 3.76 | 0 | 10.20 |
+| 3 | redesign | cmp_advanced_package | 2.93 | 12 | 11.03 |
+| 4 | dual_source | sup_taiwan_substrate_a | 0.00 | 6 | 13.96 |
 
 ## interpretation
 

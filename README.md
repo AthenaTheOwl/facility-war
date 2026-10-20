@@ -1,8 +1,8 @@
 # facility-war
 
-One Taiwan substrate supplier goes dark for 90 days, and the H100 accelerator
-spends 13 of the next 26 weeks unbuildable. Half the horizon, gone, traced back
-to a single node three tiers down the bill of materials. facility-war runs that
+Taiwan substrate and advanced-package exports stop for roughly 90 days, and the
+H100 accelerator spends about 14 of the next 26 weeks unbuildable on average
+(13.96 expected red weeks over 1,000 sampled shocks). facility-war runs that
 playthrough and tells you which one move buys the most weeks back.
 
 ## What it does
@@ -12,10 +12,14 @@ goes offline and the outage propagates up the dependency tree — substrate to
 package to accelerator — until it lands on the thing you actually ship. facility-war
 loads a supplier graph and a scenario, walks the tiered dependencies up to tier 4,
 applies the substitution edges that route around the damage, and runs a thousand
-Monte Carlo trials to get a distribution over outage weeks per BOM item.
+Monte Carlo trials to get a distribution over outage weeks per BOM item. Each
+trial draws its own shock duration and severity from the scenario: the committed
+Taiwan scenario samples duration from a triangular 6/13/26-week range and
+severity from a triangular 0.60/0.92/1.00 range. Both ranges are planning
+assumptions, not sourced estimates.
 
 Then it ranks the fixes. Each fix is applied as a change to the graph or to stock
-and re-simulated on the same shock draws as the baseline (common random
+and re-simulated on the same 1,000 shock draws as the baseline (common random
 numbers), so a saving is a paired difference rather than a fixed fraction:
 
 - dual source: a second supplier outside the shocked geography for everything a
@@ -26,17 +30,17 @@ numbers), so a saving is a paired difference rather than a fixed fraction:
 - redesign: a substitute for the directly shocked component that drops inputs
   from the shocked geography, shipping after 12 weeks.
 
-The lead times, buffer size and 0.20 post-mitigation risk are planning
-assumptions, set in `DEFAULT_MITIGATION_ASSUMPTIONS` and overridable under
-`mitigation_assumptions` in a scenario file, and the ranking is conditional on
-them. Every candidate supplier in the shocked geography is scored and the queue
-is sorted by saving, then by id, so the order of lines in the graph file does
-not change the advice.
+The lead times, buffer size and 0.20 post-mitigation risk live under
+`mitigation_assumptions` in the scenario file. They are assumptions too, and the
+ranking is conditional on them. Every candidate supplier in the shocked
+geography is scored and the queue is sorted by saving, then by id, so the order
+of lines in the graph file does not change the advice.
 
-The run writes a checked-in record plus a markdown
-report, and every number in it traces to a fixture, a scenario spec, or a backtest.
-The run is deterministic: explicit seed, fixed timestamp, same input gives the same
-report every time.
+The run writes a checked-in record plus a markdown report. The run is
+deterministic: explicit seed, fixed timestamp, same input gives the same report
+every time. A scenario whose distributions are `fixed` / `fixed_weeks` is the
+deterministic single-point mode: every trial draws the same shock. The covid
+backtest scenario and the suez and arizona scenarios use that mode.
 
 ## try it
 
@@ -49,28 +53,28 @@ python -m facility_war show
 ```
 facility-war - supply-shock playthrough, 2026-Q3-h100-substrate-shock
 scenario taiwan_substrate_90d | 1000 trials | seed 42 | 26-week horizon | tier walk to 4
-sampled shock: 13-13 weeks (mean 13.0), severity 0.92-0.92 (mean 0.92)
+sampled shock: 6-25 weeks (mean 14.9), severity 0.61-1.00 (mean 0.84)
 
 1 bom item(s), ranked by expected weeks in 'red' (supply unavailable)
 
 bom item               exp red wks  of horizon  any-red prob  red share
 -----------------------------------------------------------------------
-h100 accelerator            13.00w         50%         100%        50%
+h100 accelerator            13.96w         54%          94%        54%
 
 mitigation queue, ranked by expected red-week reduction (re-simulated on the same shock draws):
-  1. dual_source on taiwan advanced packaging supplier - saves ~7.0 red weeks (...)
-  2. buffer      on h100 accelerator - saves ~4.0 red weeks (...)
-  3. redesign    on advanced package - saves ~1.0 red weeks (...)
+  1. dual_source on taiwan advanced packaging supplier - saves ~7.6 red weeks (...)
+  2. buffer      on h100 accelerator - saves ~3.8 red weeks (...)
+  3. redesign    on advanced package - saves ~2.9 red weeks (...)
   4. dual_source on taiwan substrate supplier a - saves ~0.0 red weeks (...)
 
-headline: h100 accelerator spends ~13 of 26 weeks unavailable under this shock;
-best single move is to dual_source taiwan advanced packaging supplier (~7.0 weeks back).
+headline: h100 accelerator spends ~14 of 26 weeks unavailable under this shock;
+best single move is to dual_source taiwan advanced packaging supplier (~7.6 weeks back).
 ```
 
 A second substrate source saves nothing here: the graph already routes ABF
 substrate to a US alternate, so the accelerator's red weeks come from the
 advanced package itself. An earlier version of this run recommended dual
-sourcing the substrate supplier at 5.85 weeks. That figure was 0.45 times the
+sourcing the substrate supplier at 5.85 weeks. That figure was 0.45 times a fixed
 13-week outage, and the target was the first Taiwan supplier in the graph file.
 
 The mitigation queue is the point. A red-week count tells you how bad it is; the

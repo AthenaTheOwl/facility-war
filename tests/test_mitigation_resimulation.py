@@ -38,6 +38,26 @@ def _queue(run: dict) -> list[tuple[str, str, float]]:
     ]
 
 
+def test_committed_scenario_samples_duration_and_severity() -> None:
+    run = run_simulation(_graph(), _scenario(), trial_count=300, seed=42)
+    histogram = run["per_bom_item_distribution"][BOM]["outage_weeks"]
+    assert len(histogram) > 5
+    summary = run["shock_draw_summary"]
+    assert summary["duration_weeks"]["min"] < 13 < summary["duration_weeks"]["max"]
+    assert summary["severity"]["min"] < 0.92 < summary["severity"]["max"]
+    # severity draws below the 0.70 red line leave the bom amber, not red
+    assert run["per_bom_item_distribution"][BOM]["probability_any_red_week"] < 1.0
+
+
+def test_seed_changes_the_sampled_outcome() -> None:
+    first = run_simulation(_graph(), _scenario(), trial_count=200, seed=1)
+    second = run_simulation(_graph(), _scenario(), trial_count=200, seed=7)
+    assert (
+        first["per_bom_item_distribution"][BOM]["outage_weeks"]
+        != second["per_bom_item_distribution"][BOM]["outage_weeks"]
+    )
+
+
 def test_fixed_distributions_are_a_deterministic_single_point() -> None:
     run = run_simulation(_graph(), _fixed(_scenario()), trial_count=50, seed=42)
     assert run["per_bom_item_distribution"][BOM]["outage_weeks"] == {"13": 50}

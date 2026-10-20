@@ -2,17 +2,32 @@ scenario_id: taiwan_substrate_90d
 name: taiwan substrate pause for 90 days
 trigger: substrate and advanced package exports from taiwan stop for 90 days
 horizon_weeks: 26
+# duration and severity are planning ranges, not sourced estimates. the
+# 90-day (13-week) pause is the most likely duration; the shock can clear
+# in 6 weeks or run to the end of the 26-week horizon. severity peaks at
+# 0.92 but can fall below the 0.70 red line, which leaves the bom amber.
 duration_weeks_distribution:
-  type: fixed_weeks
-  weeks: 13
+  type: triangular
+  low: 6
+  mode: 13
+  high: 26
 affected_geographies:
   - geo_taiwan
 affected_components:
   - cmp_advanced_package
 severity_distribution:
-  type: fixed
-  value: 0.92
+  type: triangular
+  low: 0.6
+  mode: 0.92
+  high: 1.0
 substitution_severity_threshold: 0.3
+# response assumptions used when each mitigation is re-simulated on the
+# same shock draws. planning assumptions, not sourced lead times.
+mitigation_assumptions:
+  dual_source_qualification_weeks: 6
+  buffer_weeks: 4
+  redesign_lead_weeks: 12
+  post_mitigation_risk: 0.2
 references:
   - "scenario spec: 90 day export pause assumption"
   - "fixture: graphs/h100_bom.yaml"
